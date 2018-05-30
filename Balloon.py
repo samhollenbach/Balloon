@@ -8,7 +8,7 @@ def read_data(file):
     with open(file, 'r') as r:
         reader = csv.reader(r, delimiter = " ")
 
-        dat = [r for r in reader][7:]
+        dat = [r for r in reader]
 
         final_dat = []
         for d in dat:
@@ -35,7 +35,7 @@ def drag_force(h, p, v, A = 1):
 
 data = read_data("AtmoData.csv")
 
-
+print(data)
 
 
 
