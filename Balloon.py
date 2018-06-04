@@ -1,24 +1,20 @@
 import csv
 import math
 import matplotlib.pyplot as plt
+from pyproj import Proj
+import numpy as np
+from mpl_toolkits.basemap import pyproj
+from mpl_toolkits.basemap import Basemap
+
 
 tstep = 10
 
 def read_data(file):
     with open(file, 'r') as r:
-        reader = csv.reader(r, delimiter = " ")
+        reader = csv.reader(r, delimiter = " ", skipinitialspace=True)
 
         dat = [r for r in reader]
-
-        final_dat = []
-        for d in dat:
-            row = []
-            for x in d:
-                if x == '':
-                    continue
-                row.append(x)
-            final_dat.append(row)
-    return final_dat
+        return dat
 
 # m/s
 def ascent_speed(h=0):
@@ -55,7 +51,7 @@ CUR_TIME = 0
 
 ascent_path = []
 descent_path = []
-while CUR_HEIGHT < 33270:
+while CUR_HEIGHT < 35000:
 
     CUR_HEIGHT += ascent_speed(CUR_HEIGHT)*tstep
     height_index = 0
@@ -92,7 +88,7 @@ while CUR_HEIGHT > 0:
     CUR_TIME += tstep
 
 
-print(CUR_POS_X, CUR_POS_Y)
+print(round(CUR_POS_X), round(CUR_POS_Y))
 
 axs = [p[0] for p in ascent_path]
 ays = [p[1] for p in ascent_path]
@@ -100,10 +96,51 @@ ays = [p[1] for p in ascent_path]
 dxs = [p[0] for p in descent_path]
 dys = [p[1] for p in descent_path]
 
-plt.plot(axs,ays, 'r.')
-plt.plot(dxs,dys, 'b.')
-plt.axis([0,50000,0,50000])
+
+myProj = Proj("+proj=utm +zone=23K, +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+base_lat = 40.0150
+base_lon = -105.2705
+
+r_earth = 6378000
+lat_lons = []
+for p in ascent_path:
+    new_latitude = base_lat + (p[1] / r_earth) * (180 / math.pi)
+    new_longitude = base_lon + (p[0] / r_earth) * (180 / math.pi) / math.cos(base_lat * math.pi/180)
+    lat_lons.append((new_latitude, new_longitude))
+
+for p in descent_path:
+    new_latitude = base_lat + (p[1] / r_earth) * (180 / math.pi)
+    new_longitude = base_lon + (p[0] / r_earth) * (180 / math.pi) / math.cos(base_lat * math.pi/180)
+    lat_lons.append((new_latitude, new_longitude))
+
+
+wh = 50000
+lat_urc = base_lat + (wh / r_earth) * (180 / math.pi)
+lon_urc = base_lon + (wh / r_earth) * (180 / math.pi) / math.cos(base_lat * math.pi/180)
+
+lat_llc = base_lat + (-wh / r_earth) * (180 / math.pi)
+lon_llc = base_lon + (-wh / r_earth) * (180 / math.pi) / math.cos(base_lat * math.pi/180)
+
+m = Basemap(projection='merc',
+              llcrnrlat=lat_llc,llcrnrlon=lon_llc,
+              urcrnrlat=lat_urc, urcrnrlon=lon_urc,
+              resolution='l',
+              suppress_ticks=False)
+m.drawstates()
+m.drawrivers()
+m.fillcontinents(color='coral',lake_color='aqua')
+m.drawmapboundary(fill_color='aqua')
+bx, by = m(base_lon, base_lat)
+pt = m.plot(bx, by, 'ko',zorder=100)
+print(base_lat, base_lon)
+lats = [x[0] for x in lat_lons]
+lons = [x[1] for x in lat_lons]
+x, y = m(lons, lats)
+
+m.scatter(x, y, s=10, zorder=100)
+
 plt.show()
+
 
 
 
